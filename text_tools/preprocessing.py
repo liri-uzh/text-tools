@@ -251,7 +251,6 @@ class PhrasalTokenizer:
 
 
 if __name__ == "__main__":
-
     # Example usage
     from text_tools.constants import CONNECTOR_WORDS
     from text_tools.data import ChunkedDataset

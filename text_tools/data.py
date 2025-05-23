@@ -1,7 +1,7 @@
 # /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Generator, Union
+from typing import List
 from pathlib import Path
 from tqdm import tqdm
 import logging
@@ -80,12 +80,12 @@ class ChunkedDataset(Dataset):
             dataset_obj.tokenizer = AutoTokenizer.from_pretrained(load_from_path)
             logger.info(f"Tokenizer loaded from {load_from_path}")
             return dataset_obj
-        
+
         if not input_dir:
             raise ValueError("Either 'input_dir' or 'load_from_path' must be provided.")
 
         tokenizer = AutoTokenizer.from_pretrained(model_id)
-        
+
         if not Path(input_dir).exists():
             raise ValueError(f"Directory {input_dir} does not exist.")
 
@@ -125,14 +125,16 @@ class ChunkedDataset(Dataset):
         for file in tqdm(files, desc="Chunking files", unit="file"):
             doc = DocumentConverter().convert(source=file).document
             for chunk in chunker.chunk(dl_doc=doc):
-                chunks_data.append({
-                    "text": chunk.text,
-                    "file": file.stem,
-                })
-        
+                chunks_data.append(
+                    {
+                        "text": chunk.text,
+                        "file": file.stem,
+                    }
+                )
+
         dataset_obj = Dataset.from_list(chunks_data)
         # Attach the tokenizer to the dataset object for later use
-        dataset_obj.tokenizer = tokenizer 
+        dataset_obj.tokenizer = tokenizer
         return dataset_obj
 
     @staticmethod
@@ -152,11 +154,13 @@ class ChunkedDataset(Dataset):
         dataset.save_to_disk(output_dir)
         logger.info(f"Chunked dataset saved to {output_dir}")
         # save the tokenizer associated with the dataset
-        if hasattr(dataset, 'tokenizer') and dataset.tokenizer:
+        if hasattr(dataset, "tokenizer") and dataset.tokenizer:
             dataset.tokenizer.save_pretrained(output_dir)
             logger.info(f"Tokenizer saved to {output_dir}")
         else:
-            logger.warning("Tokenizer not found on the dataset object. Skipping tokenizer save.")
+            logger.warning(
+                "Tokenizer not found on the dataset object. Skipping tokenizer save."
+            )
 
         return
 
@@ -177,11 +181,13 @@ class ChunkedDataset(Dataset):
         """
         Add a column to the dataset with the tokenized length of each chunk.
         """
-        if not hasattr(dataset, 'tokenizer') or not dataset.tokenizer:
-            raise ValueError("Tokenizer not found on the dataset. Please ensure it was loaded or set.")
+        if not hasattr(dataset, "tokenizer") or not dataset.tokenizer:
+            raise ValueError(
+                "Tokenizer not found on the dataset. Please ensure it was loaded or set."
+            )
 
         dataset = dataset.map(
-            ChunkedDataset.get_tokenized_length, # Call the static method
+            ChunkedDataset.get_tokenized_length,  # Call the static method
             fn_kwargs={"tokenizer": dataset.tokenizer},
             batched=True,
             num_proc=n_processes,
@@ -191,7 +197,6 @@ class ChunkedDataset(Dataset):
 
 
 if __name__ == "__main__":
-    
     # Example usage:
 
     # Construct a chunked dataset from a directory of files
@@ -201,10 +206,10 @@ if __name__ == "__main__":
         input_dir="tests/data",
         extensions=[".md"],
         recursive=False,
-        model_id="sentence-transformers/all-MiniLM-L6-v2"
+        model_id="sentence-transformers/all-MiniLM-L6-v2",
     )
-    print(dataset) # This directly prints the Dataset object
-    
+    print(dataset)  # This directly prints the Dataset object
+
     # To save:
     ChunkedDataset.save_chunked_dataset(dataset, output_dir="tests/chunked_data")
 
