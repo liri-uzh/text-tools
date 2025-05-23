@@ -1,5 +1,5 @@
 def test_phrasal_tokenizer():
-    from text_tools.preprocesing import PhrasalTokenizer
+    from text_tools.preprocessing import PhrasalTokenizer
 
     tokenizer = PhrasalTokenizer(
         lang="de", mwes=["Dies academicus"], concat_token="_", lower=False
@@ -12,7 +12,7 @@ def test_phrasal_tokenizer():
 
 
 def test_mwe_parser():
-    from text_tools.preprocesing import MWEParser
+    from text_tools.preprocessing import MWEParser
     from text_tools.data import ChunkedDataset
     from text_tools.constants import CONNECTOR_WORDS
 
@@ -26,17 +26,13 @@ def test_mwe_parser():
     max_tokens = 32
 
     dataset = ChunkedDataset(
+        input_dir=input_dir,
         model_id=model_id,
         max_tokens=max_tokens,
+        recursive=False,
     )
 
-    dataset.build_chunked_dataset(
-        input_dir=input_dir,
-        extensions=[".md"],
-        recursive=True,
-    )
-
-    mwe_parser.learn_phraser(dataset.dataset["text"])
+    mwe_parser.learn_phraser(dataset["text"])
 
     mwes = mwe_parser.extract_phrases()
     print(f"Found {len(mwes)} multi-word expressions")

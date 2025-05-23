@@ -252,39 +252,35 @@ class PhrasalTokenizer:
 
 if __name__ == "__main__":
 
-    pass
-
     # Example usage
-    # from text_tools.constants import CONNECTOR_WORDS
-    # from text_tools.data import ChunkedDataset
+    from text_tools.constants import CONNECTOR_WORDS
+    from text_tools.data import ChunkedDataset
 
-    # mwe_parser = MWEParser(
-    #     lang="de",
-    #     connector_words=CONNECTOR_WORDS.get("de", []),
-    # )
+    mwe_parser = MWEParser(
+        lang="de",
+        connector_words=CONNECTOR_WORDS.get("de", []),
+    )
 
-    # input_dir = "tests/data/Jahresberichte_sample"
-    # model_id = "sentence-transformers/all-MiniLM-L6-v2"
-    # max_tokens = 32
+    input_dir = "tests/data/Jahresberichte_sample"
+    model_id = "sentence-transformers/all-MiniLM-L6-v2"
+    max_tokens = 32
 
-    # dataset = ChunkedDataset(
-    #     model_id=model_id,
-    #     max_tokens=max_tokens,
-    # )
+    dataset = ChunkedDataset(
+        input_dir=input_dir,
+        model_id=model_id,
+        max_tokens=max_tokens,
+        recursive=False,
+    )
 
-    # dataset.build_chunked_dataset(
-    #     input_dir=input_dir,
-    #     extensions=[".md"],
-    #     recursive=True,
-    # )
+    mwe_parser.learn_phraser(dataset["text"])
 
-    # mwe_parser.learn_phraser(dataset.dataset["text"])
+    mwes = mwe_parser.extract_phrases()
+    print(f"Found {len(mwes)} multi-word expressions")
+    print(f"First 10 multi-word expressions: {mwes[:10]}")
 
-    # mwes = mwe_parser.extract_phrases()
-    # print(f"Found {len(mwes)} multi-word expressions")
-    # print(f"First 10 multi-word expressions: {mwes[:10]}")
+    assert len(mwes) > 0, "No multi-word expressions found"
 
-    # tokenizer = PhrasalTokenizer(lang="de", mwes=mwes, concat_token="_", lower=False)
+    tokenizer = PhrasalTokenizer(lang="de", mwes=mwes, concat_token="_", lower=False)
 
-    # tokenizer.tokenize("Der Fotograf Jos Schmit hat für Dies academicus gearbeitet.")
-    # # ['Fotograf', 'Jos_Schmit', 'Dies_academicus', 'gearbeitet']
+    tokenizer.tokenize("Der Fotograf Jos Schmit hat für Dies academicus gearbeitet.")
+    # ['Fotograf', 'Jos_Schmit', 'Dies_academicus', 'gearbeitet']

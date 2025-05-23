@@ -1,6 +1,6 @@
 # `text-tools`
 
-A collection of helpful utilities for text processing and manipulation in Python.
+A collection of tools for processing large text corpora (e.g. directories of markdown files) and for tokenizing text with multi-word expressions (MWEs).
 
 ---
 
@@ -12,7 +12,6 @@ A collection of helpful utilities for text processing and manipulation in Python
   - [Standard Installation](#standard-installation)
   - [Development Installation](#development-installation)
 - [Usage](#usage)
-- [Project Structure](#project-structure)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -51,9 +50,19 @@ pip install -e ".[dev]"
 Here's a quick example of how to use the text chunking module:
 
 ```python
-dataset = ChunkedDataset(model_id="sentence-transformers/all-MiniLM-L6-v2")
-dataset.build_chunked_dataset(input_dir="path/to/directory/containing/markdown/files", extensions=[".md"], recursive=True)
-dataset.save_chunked_dataset(output_dir="path/to/save")
+dataset = ChunkedDataset(
+    input_dir="path/to/directory/containing/markdown/files",
+    extensions=[".md"],
+    recursive=True,
+    model_id="sentence-transformers/all-MiniLM-L6-v2"
+    max_tokens=256, # should be set to the model's max input length
+    )
+
+# save the chunked dataset to disk
+ChunkedDataset.save_chunked_dataset(dataset, output_dir="tests/chunked_data")
+
+# load the chunked dataset from disk
+dataset = ChunkedDataset.load_chunked_dataset(input_dir="tests/chunked_data")
 ```
 
 ### PhrasalTokenizer
@@ -69,23 +78,11 @@ mwe_parser = MWEParser(
     connector_words=CONNECTOR_WORDS.get("de", []),
 )
 
-input_dir = "tests/data/Jahresberichte_sample"
-model_id = "sentence-transformers/all-MiniLM-L6-v2"
-max_tokens = 32
-
-dataset = ChunkedDataset(
-    model_id=model_id,
-    max_tokens=max_tokens,
-)
-
-dataset.build_chunked_dataset(
-    input_dir=input_dir,
-    extensions=[".md"],
-    recursive=True,
-)
+# load a chunked dataset
+dataset = ChunkedDataset.load_chunked_dataset(input_dir="tests/chunked_data")
 
 # learn multi-word expressions from the dataset
-mwe_parser.learn_phraser(dataset.dataset["text"])
+mwe_parser.learn_phraser(dataset["text"])
 mwes = mwe_parser.extract_phrases()
 
 # initialise a PhrasalTokenizer with the learned multi-word expressions
