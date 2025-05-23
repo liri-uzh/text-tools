@@ -1,0 +1,56 @@
+[project]
+name = "text-tools"
+version = "0.1.0"
+description = "A collection of frequently used text processing tools for LiRI NLP projects."
+authors = [
+    { name = "Tannon Kew", email = "tannon.kew@uzh.com" },
+]
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+keywords = ["text", "nlp", "utilities"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Text Processing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "docling == 2.31.1",
+    "datasets == 3.6.0",
+    "spacy == 3.8.4",
+    "gensim == 4.3.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pip-chill",
+    "pytest == 8.3.4",
+    "pytest-mock == 3.14.0",
+    "ruff",
+]
+
+[project.urls]
+Homepage = "https://github.com/liri-uzh/text-tools"
+Repository = "https://github.com/liri-uzh/text-tools"
+Issues = "https://github.com/liri-uzh/text-tools/issues"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["text_tools"] # This tells setuptools to find packages within the 'text_tools' directory
+
+[tool.setuptools.package-dir]
+text_tools = "text_tools"
+
+[tool.setuptools.package-data]
+"text_tools" = ["py.typed"] # If you plan to add type hints, include py.typed
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
