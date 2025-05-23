@@ -62,7 +62,7 @@ dataset = ChunkedDataset(
 ChunkedDataset.save_chunked_dataset(dataset, output_dir="tests/chunked_data")
 
 # load the chunked dataset from disk
-dataset = ChunkedDataset.load_chunked_dataset(input_dir="tests/chunked_data")
+dataset = ChunkedDataset(load_from_path="tests/chunked_data")
 ```
 
 ### PhrasalTokenizer
