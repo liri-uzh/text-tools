@@ -1,6 +1,6 @@
 [project]
 name = "text-tools"
-version = "0.1.0"
+version = "0.2.0"
 description = "A collection of frequently used text processing tools for LiRI NLP projects."
 authors = [
     { name = "Tannon Kew", email = "tannon.kew@uzh.com" },
