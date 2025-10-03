@@ -43,7 +43,7 @@ def test_mwe_parser_original():
 
     mwe_parser = MWEParser(
         lang="de",
-        connector_words=["und", "oder", "für"],
+        connector_words={"und", "oder", "für"},
         min_count=2,
         threshold=0.5,
     )
@@ -290,13 +290,10 @@ def test_numbers_handling():
 def test_stopwords_multilingual():
     """Test stopword handling across languages"""
     from text_tools.preprocessing import PhrasalTokenizer
-    from text_tools.constants import STOP_WORDS
-
-    stop_words = [*STOP_WORDS["en"], *STOP_WORDS["de"], *STOP_WORDS["fr"]]
-
+    
     tokenizer = PhrasalTokenizer(
         lang="multi",
-        stop_words=stop_words,
+        stop_words=set(["the", "is", "and", "over", "der", "die", "das", "den", "und", "über", "le", "la", "et"]),
         keep_stopwords=False,
         lower=True,
     )

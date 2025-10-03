@@ -13,7 +13,7 @@ Installation:
 import gc
 import string
 import logging
-from typing import List, Dict, Optional, Union
+from typing import Dict, Optional, Set, Union
 
 from tqdm import tqdm
 from gensim.models.phrases import Phrases
@@ -27,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def load_spacy_model(lang: str, disable: Optional[List[str]] = None):
+def load_spacy_model(lang: str, disable: Optional[list[str]] = None):
     """Load the appropriate spaCy model for the specified language"""
     if disable is None:
         disable = []
@@ -59,7 +59,7 @@ class MWEParser:
     def __init__(
         self,
         lang: str = "en",
-        connector_words: Optional[List[str]] = None,
+        connector_words: Optional[Set[str]] = None,
         min_count: int = 4,
         threshold: float = 0.85,
         scoring: str = "npmi",
@@ -69,13 +69,13 @@ class MWEParser:
 
         Args:
             lang: Language code ('en', 'de', 'fr', 'it', or 'multi' for multilingual)
-            connector_words: List of connector words (language-agnostic when using 'multi')
+            connector_words: Set of connector words (language-agnostic when using 'multi')
             min_count: Minimum count for phrase detection
             threshold: Threshold for phrase detection
             scoring: Scoring method ('npmi', 'npmi_sqrt', 'default')
         """
         self.lang = lang
-        self.connector_words = set(connector_words) if connector_words else set()
+        self.connector_words = connector_words if connector_words else set()
         self.connector_words.update(string.punctuation)
 
         self.scoring = scoring
@@ -90,7 +90,7 @@ class MWEParser:
         if lang in ["multi", "xx"]:
             logger.info("Using multilingual model - supports mixed-language documents")
 
-    def learn_phraser(self, texts: List[str]) -> None:
+    def learn_phraser(self, texts: list[str]) -> None:
         """
         Learn multi-word expressions from texts.
 
@@ -145,7 +145,7 @@ class MWEParser:
         self.phraser = trigram_model
         logger.info("Phraser model learned successfully.")
 
-    def extract_phrases(self) -> List[str]:
+    def extract_phrases(self) -> list[str]:
         """Extract learned phrases as a list."""
         if self.phraser is None:
             raise ValueError("No phraser learned. Call learn_phraser() first.")
@@ -193,10 +193,10 @@ class PhrasalTokenizer:
     def __init__(
         self,
         lang: str,
-        disable: Optional[List[str]] = None,
-        mwes: Optional[List[str]] = None,
+        disable: Optional[list[str]] = None,
+        mwes: Optional[Set[str]] = None,
         concat_token: str = " ",
-        stop_words: Optional[List[str]] = None,
+        stop_words: Optional[Set[str]] = None,
         keep_num: bool = False,
         keep_punct: bool = False,
         keep_space: bool = False,
@@ -211,7 +211,7 @@ class PhrasalTokenizer:
         Args:
             lang: Language code ('en', 'de', 'fr', 'it', or 'multi' for multilingual)
             disable: Pipeline components to disable
-            mwes: List of multi-word expressions to recognize
+            mwes: Set of multi-word expressions to recognize
             concat_token: Token to use for concatenating MWEs
             stop_words: Additional stopwords to add
             keep_num: Keep numeric tokens
@@ -341,7 +341,7 @@ class PhrasalTokenizer:
         #     }
         #     self.nlp.Defaults.stop_words.update(common_stopwords)
 
-        self.stop_words = stop_words if stop_words else []
+        self.stop_words = stop_words if stop_words else set()
         self.nlp.Defaults.stop_words.update(self.stop_words)
 
         self.keep_num = keep_num
@@ -415,7 +415,7 @@ class PhrasalTokenizer:
 
         return True
 
-    def tokenize(self, text):
+    def tokenize(self, text) -> list[str]:
         """
         Given a text, tokenize it into words and phrases.
 
@@ -423,7 +423,7 @@ class PhrasalTokenizer:
             text (str): The input text to tokenize (any supported language if lang='multi')
 
         Returns:
-            List[str]: A list of tokens, including multi-word expressions.
+            list[str]: A list of tokens, including multi-word expressions.
         """
         doc = self.nlp(text)
         with doc.retokenize() as retokenizer:
