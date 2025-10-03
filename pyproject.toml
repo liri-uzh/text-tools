@@ -23,6 +23,7 @@ dependencies = [
     "datasets == 3.6.0",
     "spacy == 3.8.4",
     "gensim == 4.3.3",
+    "stopwordsiso == 0.6.1",
 ]
 
 [project.optional-dependencies]

@@ -26,7 +26,7 @@ A collection of tools for processing large text corpora (e.g. directories of mar
 ## Features
 
 - **ChunkedDataset**: Given a directory of corpus files in markdown format, this class can load the files and create a dataset of text chunks, which can be used for various text processing tasks.
-- **PhrasalTokenizer**: 
+- **PhrasalTokenizer**: A tokenizer that recognizes pre-computed multi-word expressions (MWEs) and treats them as single tokens during tokenization.
 
 ---
 
@@ -59,10 +59,10 @@ dataset = ChunkedDataset(
     )
 
 # save the chunked dataset to disk
-ChunkedDataset.save_chunked_dataset(dataset, output_dir="tests/chunked_data")
+ChunkedDataset.save_chunked_dataset(dataset, output_dir="tests/data/chunked_data")
 
 # load the chunked dataset from disk
-dataset = ChunkedDataset(load_from_path="tests/chunked_data")
+dataset = ChunkedDataset(load_from_path="tests/data/chunked_data")
 ```
 
 ### PhrasalTokenizer
@@ -70,16 +70,19 @@ dataset = ChunkedDataset(load_from_path="tests/chunked_data")
 Here's a quick example of how to use the phrasal tokenizer:
 
 ```python
-from text_tools.constants import CONNECTOR_WORDS, STOP_WORDS
+
+from stopwordsiso import stopwords
 from text_tools.data import ChunkedDataset
 
+lang = "de"
+
 mwe_parser = MWEParser(
-    lang="de",
-    connector_words=CONNECTOR_WORDS.get("de", []),
+    lang=lang,
+    connector_words=stopwords([lang]),
 )
 
 # load a chunked dataset
-dataset = ChunkedDataset.load_chunked_dataset(input_dir="tests/chunked_data")
+dataset = ChunkedDataset.load_chunked_dataset(input_dir="tests/data/chunked_data")
 
 # learn multi-word expressions from the dataset
 mwe_parser.learn_phraser(dataset["text"])
@@ -87,10 +90,11 @@ mwes = mwe_parser.extract_phrases()
 
 # initialise a PhrasalTokenizer with the learned multi-word expressions
 tokenizer = PhrasalTokenizer(
-    lang="de", 
-    mwes=mwes, 
-    concat_token="_", 
-    stop_words=STOP_WORDS.get("de", []),
+    lang=lang,
+    mwes=mwes,
+    concat_token="_",
+    stop_words=stopwords([lang]),
+    keep_stopwords=False,
     lower=False
     )
 
