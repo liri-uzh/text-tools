@@ -63,6 +63,8 @@ class MWEParser:
         min_count: int = 4,
         threshold: float = 0.85,
         scoring: str = "npmi",
+        allow_internal_punct: bool = True,
+        allow_numbers: bool = True,
     ):
         """
         Multi-Word Expression Parser.
@@ -81,6 +83,9 @@ class MWEParser:
         self.scoring = scoring
         self.min_count = min_count
         self.threshold = threshold
+
+        self.allow_internal_punct = allow_internal_punct
+        self.allow_numbers = allow_numbers
 
         self.nlp = load_spacy_model(lang, disable=["ner", "textcat", "tagger"])
         if "sentencizer" not in self.nlp.pipe_names:
@@ -112,26 +117,32 @@ class MWEParser:
             connector_words=frozenset(self.connector_words),
         )
 
+        internal_punct = {"-", "'", "'", "'"} if self.allow_internal_punct else set()
+
         # Stream over chunks, extract sentences, and update the phrase models
         for text in tqdm(texts, desc="Learning phrases..."):
             for doc in self.nlp.pipe([text], n_process=1):
+                # Extract tokens from sentences, applying filtering rules for punctuation and numbers
                 doc_sent_tokens = [
                     [
                         token.text
                         for token in sent
                         if not (
-                            token.is_digit
-                            or token.like_num
-                            or token.is_punct
-                            or token.is_space
+                            token.is_space
                             or token.text.startswith("|")
+                            or (token.is_punct and token.text not in internal_punct)
+                            or (not self.allow_numbers and (token.is_digit or token.like_num))
+                            or len(token.text.strip()) == 0  # Filter empty tokens
+                            or token.text.isspace()  # Filter pure whitespace
                         )
                     ]
                     for sent in doc.sents
                 ]
+
+                # Filter out empty sentences
                 doc_sent_tokens = [
-                    sent for sent in doc_sent_tokens if len(sent) > 0
-                ]  # filter out empty sentences
+                    sent for sent in doc_sent_tokens if len(sent) >= 2
+                ]
                 bigram_model.add_vocab(doc_sent_tokens)
                 trigram_model.add_vocab(bigram_model[doc_sent_tokens])
 
@@ -197,6 +208,7 @@ class PhrasalTokenizer:
         mwes: Optional[Set[str]] = None,
         concat_token: str = " ",
         stop_words: Optional[Set[str]] = None,
+        include_named_entities: bool = True,
         keep_num: bool = False,
         keep_punct: bool = False,
         keep_space: bool = False,
@@ -241,6 +253,7 @@ class PhrasalTokenizer:
         self.keep_url = keep_url
         self.keep_stopwords = keep_stopwords
         self.lower = lower
+        self.include_named_entities = include_named_entities
 
         if lang in ["multi", "xx"]:
             logger.info("Using multilingual model - supports mixed-language documents")
@@ -272,7 +285,7 @@ class PhrasalTokenizer:
             if patterns:
                 ruler.add_patterns(patterns)
 
-    def is_valid_token(self, token):
+    def _is_valid_token(self, token):
         """Check if token should be kept based on filtering rules"""
         # Enhanced stopword checking for multilingual
         if not self.keep_stopwords:
@@ -290,7 +303,11 @@ class PhrasalTokenizer:
             return False
 
         # Check if the token is not a digit or like a number
-        if not self.keep_num and (token.is_digit or token.like_num):
+        if not self.keep_num and (
+            token.is_digit 
+            or token.like_num 
+            or any(c.isdigit() for c in token.text)
+        ):
             return False
 
         # Check if the token is not a space or starts with '|'
@@ -305,6 +322,59 @@ class PhrasalTokenizer:
 
         return True
 
+    def _is_valid_mwe_entity(self, ent) -> bool:
+        """
+        Validate that an entity is a legitimate MWE, not a spurious match.
+        
+        Args:
+            ent: spaCy entity span
+            
+        Returns:
+            bool: True if entity should be merged as MWE
+        """
+        entity_text = ent.text
+        
+        # Filter empty or whitespace-only entities
+        if not entity_text or entity_text.isspace():
+            return False
+        
+        # Filter entities that are purely numeric (including negatives, decimals)
+        # Matches: -1.6, 123, -456, 1.23, etc.
+        if entity_text.replace('-', '').replace('.', '').replace(',', '').isdigit():
+            return False
+        
+        # Filter entities that are predominantly punctuation
+        # Count alphanumeric vs punctuation characters
+        alphanumeric_count = sum(c.isalnum() for c in entity_text)
+        punct_count = sum(c in string.punctuation for c in entity_text)
+        total_chars = len(entity_text)
+        
+        # Reject if more than 70% punctuation
+        if total_chars > 0 and (punct_count / total_chars) > 0.7:
+            return False
+        
+        # Reject if no alphanumeric characters at all
+        if alphanumeric_count == 0:
+            return False
+        
+        # Filter markdown table separators (repeated dashes/pipes)
+        if entity_text.startswith('|') and entity_text.count('-') > 3:
+            return False
+        
+        if entity_text.count(' ') > 3: # arbitrary threshold for entities with too many spaces (e.g.  Ausbau bestehender und Schaffung neuer)
+            # print("Rejecting entity with too many spaces:", entity_text)
+            return False
+
+        # Filter if it's just repeated punctuation
+        if len(set(entity_text.replace(' ', ''))) <= 2 and all(c in string.punctuation + ' ' for c in entity_text):
+            return False
+        
+        if not self.include_named_entities and ent.label_ != "MWE":
+            # Only merge entities explicitly labeled as MWE (our custom patterns)
+            return False
+        
+        return True
+
     def tokenize(self, text) -> list[str]:
         """
         Given a text, tokenize it into words and phrases.
@@ -316,19 +386,24 @@ class PhrasalTokenizer:
             list[str]: A list of tokens, including multi-word expressions.
         """
         doc = self.nlp(text)
-        with doc.retokenize() as retokenizer:
-            for ent in doc.ents:
-                retokenizer.merge(
-                    doc[ent.start : ent.end],
-                    attrs={"LEMMA": ent.text.replace(" ", "_")},
-                )
+        
+        # Filter and merge only valid MWE entities
+        valid_entities = [ent for ent in doc.ents if self._is_valid_mwe_entity(ent)]
+        
+        if valid_entities:
+            with doc.retokenize() as retokenizer:
+                for ent in valid_entities:
+                    retokenizer.merge(
+                        doc[ent.start : ent.end],
+                        attrs={"LEMMA": ent.text.replace(" ", "_")},
+                    )
 
         return [
             x.text.replace(" ", self.concat_token).lower()
             if self.lower
             else x.text.replace(" ", self.concat_token)
             for x in doc
-            if self.is_valid_token(x)
+            if self._is_valid_token(x)
         ]
 
 
