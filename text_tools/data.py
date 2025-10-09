@@ -165,6 +165,20 @@ class ChunkedDataset(Dataset):
         return
 
     @staticmethod
+    def save_chunked_dataset_as_jsonl(
+        dataset: Dataset,
+        output_file: str,
+    ) -> None:
+        """
+        Save the chunked dataset to a JSONL file.
+        """
+        dataset.to_json(output_file, force_ascii=False)
+        
+        logger.info(f"Chunked dataset saved to {output_file} in JSONL format.")
+        
+        return
+
+    @staticmethod
     def get_tokenized_length(batch, tokenizer):
         # Tokenize the batch of texts without padding
         tokenized = tokenizer(batch["text"], truncation=False, padding=False)
